@@ -1,0 +1,25 @@
+# Dataset and Large Files
+data/
+train_env/
+synthetic_images/
+epochs_output/
+
+# Models
+*.keras
+*.h5
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

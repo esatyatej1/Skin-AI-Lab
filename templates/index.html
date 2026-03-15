@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkinAI Lab | Medical GAN Studio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00f2fe;
+            --secondary: #7000ff;
+            --bg: #03050a;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-hover: rgba(255, 255, 255, 0.06);
+            --text: #ffffff;
+            --accent: #ff007c;
+            --danger: #ff4d4d;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            background:
+                radial-gradient(circle at 0% 0%, rgba(112, 0, 255, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 100% 100%, rgba(0, 242, 254, 0.15) 0%, transparent 40%),
+                #03050a;
+            padding: 40px 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 4rem;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .logo {
+            font-size: 3.5rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            font-weight: 300;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            margin-bottom: 2rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-5px);
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6);
+        }
+
+        .image-viewport {
+            width: 300px;
+            height: 300px;
+            margin: 0 auto 2.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--glass-border);
+            position: relative;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        #generatedImage {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+            filter: drop-shadow(0 0 15px rgba(0, 242, 254, 0.2));
+            image-rendering: pixelated;
+        }
+
+        #placeholder {
+            color: rgba(255, 255, 255, 0.2);
+            font-weight: 300;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            padding: 1.1rem 2.8rem;
+            border-radius: 16px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-size: 0.85rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .btn:hover::after {
+            left: 100%;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(112, 0, 255, 0.3);
+        }
+
+        .btn-stop {
+            background: rgba(255, 77, 77, 0.1);
+            border: 1px solid rgba(255, 77, 77, 0.3);
+            color: var(--danger);
+            display: none;
+            /* Hidden by default */
+        }
+
+        .btn-stop:hover {
+            background: var(--danger);
+            color: white;
+            box-shadow: 0 10px 25px rgba(255, 77, 77, 0.3);
+        }
+
+        .loader {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        .terminal {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 16px;
+            padding: 1.5rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            color: #a0aec0;
+            min-height: 200px;
+            max-height: 350px;
+            overflow-y: auto;
+            border: 1px solid var(--glass-border);
+            text-align: left;
+        }
+
+        .terminal-line {
+            margin-bottom: 6px;
+        }
+
+        .terminal-prefix {
+            color: var(--primary);
+            margin-right: 10px;
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .badge.active {
+            background: rgba(0, 242, 254, 0.1);
+            color: var(--primary);
+            border-color: var(--primary);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--glass-border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="logo">SkinAI Lab</h1>
+            <p class="subtitle">Synthetic Dermatology Generation</p>
+        </header>
+
+        <section class="glass-card">
+            <div class="image-viewport" id="viewport">
+                <div id="placeholder">READY TO GENERATE</div>
+                <img id="generatedImage" src="" alt="Synthetic dermatology sample">
+            </div>
+
+            <div class="controls">
+                <button id="generateBtn" class="btn">
+                    <span id="btnText">Generate Sample</span>
+                    <div class="loader" id="loader"></div>
+                </button>
+            </div>
+        </section>
+
+        <section class="glass-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h3 style="font-weight: 400; opacity: 0.8; letter-spacing: 2px; text-transform: uppercase;">Training
+                    Studio</h3>
+                <div id="trainBadge" class="badge">SYSTEM READY</div>
+            </div>
+
+            <div class="controls" style="margin-bottom: 2rem;">
+                <button id="trainBtn" class="btn"
+                    style="background: var(--glass); border: 1px solid var(--glass-border);">
+                    <span>Initialize Training</span>
+                </button>
+                <button id="stopBtn" class="btn btn-stop">
+                    <span>Emergency Stop</span>
+                </button>
+            </div>
+
+            <div class="terminal" id="terminal">
+                <div class="terminal-line"><span class="terminal-prefix">></span>Waiting for process initialization...
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const generateBtn = document.getElementById('generateBtn');
+        const trainBtn = document.getElementById('trainBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const generatedImage = document.getElementById('generatedImage');
+        const placeholder = document.getElementById('placeholder');
+        const loader = document.getElementById('loader');
+        const btnText = document.getElementById('btnText');
+        const viewport = document.getElementById('viewport');
+        const terminal = document.getElementById('terminal');
+        const trainBadge = document.getElementById('trainBadge');
+
+        // Generator Logic
+        generateBtn.addEventListener('click', async () => {
+            generateBtn.disabled = true;
+            loader.style.display = 'block';
+            btnText.style.opacity = '0';
+            viewport.style.borderColor = 'var(--primary)';
+
+            try {
+                const response = await fetch('/generate');
+                const data = await response.json();
+
+                if (data.image) {
+                    generatedImage.src = 'data:image/png;base64,' + data.image;
+                    generatedImage.style.display = 'block';
+                    placeholder.style.display = 'none';
+
+                    generatedImage.style.transform = 'scale(0.9)';
+                    setTimeout(() => {
+                        generatedImage.style.transition = 'transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                        generatedImage.style.transform = 'scale(1)';
+                    }, 10);
+                }
+            } catch (error) {
+                console.error(error);
+            } finally {
+                generateBtn.disabled = false;
+                loader.style.display = 'none';
+                btnText.style.opacity = '1';
+                viewport.style.borderColor = 'var(--glass-border)';
+            }
+        });
+
+        // Training Logic
+        let trainInterval = null;
+
+        trainBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/train', { method: 'POST' });
+                const data = await response.json();
+                startStatusPolling();
+            } catch (error) {
+                alert("Connection error.");
+            }
+        });
+
+        stopBtn.addEventListener('click', async () => {
+            if (confirm("Terminate training process immediately?")) {
+                try {
+                    await fetch('/train/stop', { method: 'POST' });
+                    trainBadge.innerText = 'STOPPING...';
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+        });
+
+        function startStatusPolling() {
+            if (trainInterval) clearInterval(trainInterval);
+
+            trainBtn.style.display = 'none';
+            stopBtn.style.display = 'flex';
+            trainBadge.innerText = 'TRAINING IN PROGRESS';
+            trainBadge.classList.add('active');
+
+            trainInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/train/status');
+                    const data = await response.json();
+
+                    terminal.innerHTML = data.logs.map(line =>
+                        `<div class="terminal-line"><span class="terminal-prefix">></span>${line}</div>`
+                    ).join('');
+                    terminal.scrollTop = terminal.scrollHeight;
+
+                    if (!data.running) {
+                        clearInterval(trainInterval);
+                        trainBtn.style.display = 'flex';
+                        stopBtn.style.display = 'none';
+                        trainBtn.innerText = 'Restart Training';
+                        trainBadge.innerText = 'PROCESS FINISHED';
+                        trainBadge.classList.remove('active');
+                    }
+                } catch (e) {
+                    console.error("Polling error", e);
+                }
+            }, 1000);
+        }
+
+        // Init check
+        window.addEventListener('load', async () => {
+            const resp = await fetch('/train/status');
+            const data = await resp.json();
+            if (data.running) startStatusPolling();
+        });
+    </script>
+</body>
+
+</html>
