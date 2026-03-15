@@ -143,6 +143,28 @@ def generate():
     img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
     
     return jsonify({'image': img_str})
+    
+@app.route('/epochs', methods=['GET'])
+def get_epochs():
+    epochs_dir = 'c:/123/epochs_output'
+    if not os.path.exists(epochs_dir):
+        return jsonify([])
+    
+    images = []
+    # Sort files to show them in order
+    files = sorted([f for f in os.listdir(epochs_dir) if f.endswith('.png')], 
+                   key=lambda x: int(x.replace('epoch_', '').replace('.png', '')) if x.replace('epoch_', '').replace('.png', '').isdigit() else 0)
+    
+    for filename in files:
+        filepath = os.path.join(epochs_dir, filename)
+        with open(filepath, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+            images.append({
+                'name': filename.replace('.png', '').replace('_', ' ').title(),
+                'image': encoded_string
+            })
+    
+    return jsonify(images)
 
 if __name__ == '__main__':
     # Ensure the model exists before starting
