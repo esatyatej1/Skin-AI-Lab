@@ -20,6 +20,7 @@ generator = None
 # Global variable for training status
 training_process = None
 training_output = []
+current_progress = 0
 
 def load_generator():
     global generator
@@ -40,8 +41,11 @@ def index():
 @app.route('/train', methods=['POST'])
 def train():
     global training_process, training_output
+    data = request.get_json() or {}
+    mode = data.get('mode', 'normal')
+
     if training_process and training_process.poll() is None:
-        return jsonify({'status': 'running', 'message': 'Training is already in progress.'})
+        return jsonify({'status': 'running', 'message': f'Training ({mode}) is already in progress.'})
     
     training_output = ["Starting training process..."]
     
@@ -49,7 +53,7 @@ def train():
         global training_process
         # We trigger the .bat file or direct wsl command
         # Using WSL command directly to capture output better
-        cmd = ["wsl", "-d", "Ubuntu-22.04", "-u", "root", "bash", "/mnt/c/123/setup.sh"]
+        cmd = ["wsl", "-d", "Ubuntu-22.04", "-u", "root", "bash", "/mnt/c/123/setup.sh", mode]
         
         try:
             process = subprocess.Popen(
@@ -63,7 +67,17 @@ def train():
             training_process = process
             
             for line in iter(process.stdout.readline, ""):
-                training_output.append(line.strip())
+                line_text = line.strip()
+                if "PROGRESS:" in line_text:
+                    try:
+                        # Extract 10/100 -> 10%
+                        parts = line_text.split("PROGRESS:")[1].strip().split("/")
+                        global current_progress
+                        current_progress = int((int(parts[0]) / int(parts[1])) * 100)
+                    except:
+                        pass
+                
+                training_output.append(line_text)
                 # Keep only last 100 lines for memory
                 if len(training_output) > 100:
                     training_output.pop(0)
@@ -85,6 +99,7 @@ def train_status():
     is_running = training_process and training_process.poll() is None
     return jsonify({
         'running': is_running,
+        'progress': current_progress,
         'logs': training_output[-20:] # Return last 20 lines
     })
 

@@ -16,13 +16,25 @@ source /mnt/c/123/train_env/bin/activate
 
 echo "Installing Python Dependencies..."
 pip install tensorflow[and-cuda] opencv-python pandas scikit-learn matplotlib
-echo "Configuring LD_LIBRARY_PATH for CUDA..."
+echo "Configuring environment variables for GPU..."
 export LD_LIBRARY_PATH=$(ls -d /mnt/c/123/train_env/lib/python3.*/site-packages/nvidia/*/lib | paste -sd ':' -):$LD_LIBRARY_PATH
+export TF_CPP_MIN_LOG_LEVEL=1
 
 echo "Checking GPU Availability in TensorFlow..."
-python3 -c "import tensorflow as tf; print('Num GPUs Available: ', len(tf.config.list_physical_devices('GPU')))"
+python3 -c "import tensorflow as tf; print('Found GPUs: ', tf.config.list_physical_devices('GPU'))"
 
-echo "Starting Training..."
-python3 /mnt/c/123/dcgan_train.py
+echo "--------------------------------------------------------"
+echo "NOTE: Since you have a new RTX 5070, TensorFlow might"
+echo "take a few minutes to 'JIT compile' kernels on the first run."
+echo "If it seems stuck, please wait 2-5 minutes."
+echo "--------------------------------------------------------"
+
+MODE=$1
+if [ -z "$MODE" ]; then
+    MODE="normal"
+fi
+
+echo "Starting Training in $MODE mode..."
+python3 /mnt/c/123/dcgan_train.py --mode $MODE
 
 echo "Done!"

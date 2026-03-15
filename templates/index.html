@@ -57,6 +57,7 @@
             font-size: 3.5rem;
             font-weight: 600;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 0.5rem;
@@ -308,14 +309,42 @@
                 <div id="trainBadge" class="badge">SYSTEM READY</div>
             </div>
 
-            <div class="controls" style="margin-bottom: 2rem;">
-                <button id="trainBtn" class="btn"
-                    style="background: var(--glass); border: 1px solid var(--glass-border);">
-                    <span>Initialize Training</span>
-                </button>
-                <button id="stopBtn" class="btn btn-stop">
-                    <span>Emergency Stop</span>
-                </button>
+            <div class="controls" style="margin-bottom: 2rem; flex-direction: column; align-items: center;">
+                <div style="margin-bottom: 1rem; color: rgba(255,255,255,0.7); font-size: 0.9rem;">
+                    Select Training Tier:
+                </div>
+                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                    <select id="modeSelect"
+                        style="background: var(--glass); border: 1px solid var(--glass-border); color: white; padding: 0.8rem 1.5rem; border-radius: 12px; outline: none; cursor: pointer;">
+                        <option value="lite">Lite - FAST (2-3m)</option>
+                        <option value="normal" selected>Normal - BALANCED (5-7m)</option>
+                        <option value="heavy">Heavy - QUALITY (15m+)</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 1.5rem;">
+                    <button id="trainBtn" class="btn"
+                        style="background: var(--glass); border: 1px solid var(--glass-border);">
+                        <span>Initialize Training</span>
+                    </button>
+                    <button id="stopBtn" class="btn btn-stop">
+                        <span>Emergency Stop</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="progressContainer"
+                style="display: none; width: 100%; margin-bottom: 2rem; animation: fadeInDown 0.5s ease-out;">
+                <div
+                    style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem; color: rgba(255,255,255,0.6);">
+                    <span id="progressLabel">Training Progress</span>
+                    <span id="progressText">0%</span>
+                </div>
+                <div
+                    style="width: 100%; height: 10px; background: rgba(0,0,0,0.3); border-radius: 20px; overflow: hidden; border: 1px solid var(--glass-border); box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);">
+                    <div id="progressBar"
+                        style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); box-shadow: 0 0 15px var(--primary); transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);">
+                    </div>
+                </div>
             </div>
 
             <div class="terminal" id="terminal">
@@ -336,6 +365,11 @@
         const viewport = document.getElementById('viewport');
         const terminal = document.getElementById('terminal');
         const trainBadge = document.getElementById('trainBadge');
+        const modeSelect = document.getElementById('modeSelect');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const progressLabel = document.getElementById('progressLabel');
 
         // Generator Logic
         generateBtn.addEventListener('click', async () => {
@@ -373,8 +407,13 @@
         let trainInterval = null;
 
         trainBtn.addEventListener('click', async () => {
+            const selectedMode = modeSelect.value;
             try {
-                const response = await fetch('/train', { method: 'POST' });
+                const response = await fetch('/train', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: selectedMode })
+                });
                 const data = await response.json();
                 startStatusPolling();
             } catch (error) {
@@ -398,6 +437,7 @@
 
             trainBtn.style.display = 'none';
             stopBtn.style.display = 'flex';
+            progressContainer.style.display = 'block';
             trainBadge.innerText = 'TRAINING IN PROGRESS';
             trainBadge.classList.add('active');
 
@@ -405,6 +445,18 @@
                 try {
                     const response = await fetch('/train/status');
                     const data = await response.json();
+
+                    // Update Progress
+                    if (data.progress !== undefined) {
+                        progressBar.style.width = data.progress + '%';
+                        progressText.innerText = data.progress + '%';
+
+                        if (data.progress >= 100) {
+                            progressLabel.innerText = 'Generating Synthetic Samples...';
+                        } else {
+                            progressLabel.innerText = 'Training Neural Networks...';
+                        }
+                    }
 
                     terminal.innerHTML = data.logs.map(line =>
                         `<div class="terminal-line"><span class="terminal-prefix">></span>${line}</div>`
